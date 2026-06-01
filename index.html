@@ -1,0 +1,1540 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trading Dashboard — Lighter & Aster</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080b12;
+    --surface: #0d1220;
+    --surface2: #111827;
+    --border: #1e2d44;
+    --accent-l: #00e5ff;
+    --accent-a: #ff6b35;
+    --green: #00ff87;
+    --red: #ff3b5c;
+    --yellow: #ffd166;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --font-mono: 'Space Mono', monospace;
+    --font-display: 'Syne', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ─── GRID BG ─── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ─── LAYOUT ─── */
+  .app { display: flex; height: 100vh; position: relative; z-index: 1; }
+
+  /* ─── SIDEBAR ─── */
+  .sidebar {
+    width: 220px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+  }
+
+  .logo {
+    padding: 20px 18px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo-title {
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    color: #fff;
+  }
+  .logo-sub {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .nav { flex: 1; padding: 12px 0; }
+  .nav-section {
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 10px 18px 4px;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 18px;
+    cursor: pointer;
+    color: var(--muted);
+    transition: all 0.15s;
+    border-left: 2px solid transparent;
+    font-size: 12px;
+  }
+  .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+  .nav-item.active { color: var(--accent-l); border-left-color: var(--accent-l); background: rgba(0,229,255,0.05); }
+  .nav-item .icon { font-size: 14px; width: 16px; text-align: center; }
+
+  .exchange-tags {
+    padding: 12px 18px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .tag {
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    padding: 3px 7px;
+    border-radius: 3px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .tag-l { background: rgba(0,229,255,0.12); color: var(--accent-l); border: 1px solid rgba(0,229,255,0.25); }
+  .tag-a { background: rgba(255,107,53,0.12); color: var(--accent-a); border: 1px solid rgba(255,107,53,0.25); }
+
+  .refresh-btn {
+    margin: 10px 18px;
+    padding: 8px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    transition: all 0.15s;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .refresh-btn:hover { border-color: var(--accent-l); color: var(--accent-l); }
+  .refresh-btn.spinning .spin-icon { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .auto-refresh-toggle {
+    margin: 0 18px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .toggle-switch {
+    width: 28px; height: 14px;
+    background: var(--border);
+    border-radius: 7px;
+    position: relative;
+    transition: background 0.2s;
+    cursor: pointer;
+  }
+  .toggle-switch.on { background: var(--accent-l); }
+  .toggle-knob {
+    width: 10px; height: 10px;
+    background: white;
+    border-radius: 50%;
+    position: absolute;
+    top: 2px; left: 2px;
+    transition: left 0.2s;
+  }
+  .toggle-switch.on .toggle-knob { left: 16px; }
+
+  /* ─── MAIN ─── */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ─── TOPBAR ─── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .topbar-title {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 800;
+    color: #fff;
+  }
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .last-update { font-size: 10px; color: var(--muted); }
+
+  /* ─── CONTENT ─── */
+  .content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+  }
+  .content::-webkit-scrollbar { width: 4px; }
+  .content::-webkit-scrollbar-track { background: transparent; }
+  .content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ─── PAGE ─── */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ─── CONFIG PANEL ─── */
+  .config-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .config-panel h3 {
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+  .config-group { display: flex; flex-direction: column; gap: 6px; }
+  .config-group label {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .config-group label .dot-l { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-l); display: inline-block; }
+  .config-group label .dot-a { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-a); display: inline-block; }
+  .input-field {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 10px;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.15s;
+    width: 100%;
+  }
+  .input-field:focus { border-color: var(--accent-l); }
+  .input-field::placeholder { color: var(--muted); }
+  .save-btn {
+    padding: 9px 20px;
+    background: var(--accent-l);
+    color: var(--bg);
+    border: none;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.08em;
+    transition: opacity 0.15s;
+    margin-top: 8px;
+  }
+  .save-btn:hover { opacity: 0.85; }
+
+  /* ─── STATS GRID ─── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .stat-card.lighter::before { background: var(--accent-l); }
+  .stat-card.aster::before { background: var(--accent-a); }
+  .stat-card.positive::before { background: var(--green); }
+  .stat-card.negative::before { background: var(--red); }
+  .stat-card.neutral::before { background: var(--yellow); }
+
+  .stat-label {
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .stat-value {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1;
+  }
+  .stat-sub {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .stat-badge {
+    display: inline-block;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-weight: 700;
+    margin-top: 4px;
+  }
+  .badge-green { background: rgba(0,255,135,0.15); color: var(--green); }
+  .badge-red { background: rgba(255,59,92,0.15); color: var(--red); }
+
+  /* ─── TABLES ─── */
+  .table-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .table-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .table-title {
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .ex-badge {
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+  .ex-badge.l { background: rgba(0,229,255,0.15); color: var(--accent-l); }
+  .ex-badge.a { background: rgba(255,107,53,0.15); color: var(--accent-a); }
+
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left;
+    padding: 8px 16px;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    background: rgba(0,0,0,0.2);
+  }
+  td {
+    padding: 10px 16px;
+    border-bottom: 1px solid rgba(30,45,68,0.5);
+    font-size: 12px;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .pos { color: var(--green); }
+  .neg { color: var(--red); }
+  .side-long { color: var(--green); font-weight: 700; }
+  .side-short { color: var(--red); font-weight: 700; }
+
+  /* ─── EMPTY STATE ─── */
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+  }
+  .empty-state .icon { font-size: 32px; margin-bottom: 12px; opacity: 0.4; }
+  .empty-state p { font-size: 12px; }
+
+  /* ─── LOADING ─── */
+  .loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 24px;
+    color: var(--muted);
+    font-size: 11px;
+  }
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent-l);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  /* ─── CALENDAR ─── */
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-top: 12px;
+  }
+  .cal-header { text-align: center; font-size: 9px; color: var(--muted); padding: 4px; letter-spacing: 0.1em; text-transform: uppercase; }
+  .cal-day {
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+    min-height: 50px;
+    position: relative;
+    background: var(--bg);
+  }
+  .cal-day:hover { border-color: var(--border); }
+  .cal-day.empty { opacity: 0.2; pointer-events: none; }
+  .cal-day.today { border-color: var(--accent-l); }
+  .cal-day.has-trades { background: rgba(0,229,255,0.05); }
+  .cal-day.profit { border-color: rgba(0,255,135,0.4); background: rgba(0,255,135,0.06); }
+  .cal-day.loss { border-color: rgba(255,59,92,0.4); background: rgba(255,59,92,0.06); }
+  .cal-day-num { font-size: 11px; line-height: 1; }
+  .cal-day-pnl { font-size: 9px; margin-top: 3px; font-weight: 700; }
+
+  /* ─── PNL CHART ─── */
+  .chart-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+  canvas { width: 100% !important; max-width: 100%; }
+
+  /* ─── ALERT ─── */
+  .alert {
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-size: 11px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    line-height: 1.6;
+  }
+  .alert-warn { background: rgba(255,209,102,0.08); border: 1px solid rgba(255,209,102,0.25); color: var(--yellow); }
+  .alert-info { background: rgba(0,229,255,0.06); border: 1px solid rgba(0,229,255,0.2); color: var(--accent-l); }
+  .alert-error { background: rgba(255,59,92,0.08); border: 1px solid rgba(255,59,92,0.25); color: var(--red); }
+
+  /* ─── SECTION HEADER ─── */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .section-header h2 {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 800;
+    color: #fff;
+  }
+  .section-divider {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ─── TWO-COL ─── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* ─── DEPOSIT/WITHDRAWAL ─── */
+  .tx-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    border-bottom: 1px solid rgba(30,45,68,0.5);
+    font-size: 12px;
+  }
+  .tx-item:last-child { border-bottom: none; }
+  .tx-type-icon {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    margin-right: 10px;
+  }
+  .tx-deposit .tx-type-icon { background: rgba(0,255,135,0.12); }
+  .tx-withdraw .tx-type-icon { background: rgba(255,59,92,0.12); }
+
+  /* ─── TABS ─── */
+  .tabs { display: flex; gap: 2px; margin-bottom: 16px; }
+  .tab-btn {
+    padding: 6px 14px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+    border-radius: 4px;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { background: rgba(0,229,255,0.1); border-color: var(--accent-l); color: var(--accent-l); }
+
+  /* ─── ERROR MESSAGE ─── */
+  .error-msg { color: var(--red); font-size: 11px; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-title">⚡ TradeDash</div>
+      <div class="logo-sub">Lighter &amp; Aster Monitor</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-section">Vistas</div>
+      <div class="nav-item active" onclick="showPage('overview')">
+        <span class="icon">◈</span> Overview
+      </div>
+      <div class="nav-item" onclick="showPage('pnl')">
+        <span class="icon">📈</span> PnL
+      </div>
+      <div class="nav-item" onclick="showPage('positions')">
+        <span class="icon">⊞</span> Posiciones
+      </div>
+      <div class="nav-item" onclick="showPage('calendar')">
+        <span class="icon">📅</span> Calendario
+      </div>
+      <div class="nav-item" onclick="showPage('transfers')">
+        <span class="icon">⇅</span> Depósitos/Retiros
+      </div>
+      <div class="nav-section">Ajustes</div>
+      <div class="nav-item" onclick="showPage('config')">
+        <span class="icon">⚙</span> Configuración
+      </div>
+    </nav>
+
+    <div class="exchange-tags">
+      <span class="tag tag-l">Lighter</span>
+      <span class="tag tag-a">Aster</span>
+    </div>
+
+    <button class="refresh-btn" id="refreshBtn" onclick="fetchAllData()">
+      <span class="spin-icon">↻</span> Actualizar
+    </button>
+    <div class="auto-refresh-toggle" onclick="toggleAutoRefresh()">
+      <div class="toggle-switch" id="autoToggle"><div class="toggle-knob"></div></div>
+      <span id="autoLabel">Auto-refresh: OFF</span>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span class="status-dot" id="statusDot"></span>
+        <span class="topbar-title" id="pageTitle">Overview</span>
+      </div>
+      <span class="last-update" id="lastUpdate">Sin datos aún</span>
+    </div>
+
+    <div class="content">
+
+      <!-- ══════ CONFIG ══════ -->
+      <div class="page active" id="page-config">
+        <div class="section-header">
+          <h2>Configuración de Cuentas</h2>
+          <div class="section-divider"></div>
+        </div>
+
+        <div class="alert alert-info">
+          ℹ️ Tus credenciales se guardan <strong>solo en tu navegador</strong> (localStorage). Nunca salen de tu dispositivo. Usa claves de solo-lectura/trading, sin permisos de retiro.
+        </div>
+
+        <!-- LIGHTER -->
+        <div class="config-panel">
+          <h3><span class="tag tag-l">Lighter</span> Credenciales</h3>
+          <div class="config-grid">
+            <div class="config-group">
+              <label><span class="dot-l"></span> L1 Address (tu wallet EVM)</label>
+              <input class="input-field" id="l_l1address" type="text" placeholder="0xABC...tu dirección L1" />
+            </div>
+            <div class="config-group">
+              <label><span class="dot-l"></span> Account Index</label>
+              <input class="input-field" id="l_accountIndex" type="number" placeholder="0" />
+            </div>
+            <div class="config-group">
+              <label><span class="dot-l"></span> API Key Index</label>
+              <input class="input-field" id="l_apiKeyIndex" type="number" placeholder="3" />
+            </div>
+            <div class="config-group">
+              <label><span class="dot-l"></span> API Private Key (solo lectura recomendada)</label>
+              <input class="input-field" id="l_privateKey" type="password" placeholder="0x..." />
+            </div>
+          </div>
+          <button class="save-btn" onclick="saveConfig('lighter')">Guardar Lighter</button>
+          <span id="lighter-save-ok" style="color:var(--green);font-size:11px;margin-left:12px;display:none;">✓ Guardado</span>
+        </div>
+
+        <!-- ASTER -->
+        <div class="config-panel">
+          <h3><span class="tag tag-a">Aster</span> Credenciales</h3>
+          <div class="alert alert-warn" style="margin-bottom:14px;">
+            ⚠️ Aster requiere firma HMAC-SHA256. Por seguridad en un HTML local, las llamadas autenticadas van a través de un proxy CORS si es necesario. Para datos públicos (precios, mercados) no se requiere API key.
+          </div>
+          <div class="config-grid">
+            <div class="config-group">
+              <label><span class="dot-a"></span> API Key</label>
+              <input class="input-field" id="a_apiKey" type="text" placeholder="tu-api-key-de-aster" />
+            </div>
+            <div class="config-group">
+              <label><span class="dot-a"></span> API Secret</label>
+              <input class="input-field" id="a_apiSecret" type="password" placeholder="tu-api-secret" />
+            </div>
+          </div>
+          <button class="save-btn" style="background:var(--accent-a);" onclick="saveConfig('aster')">Guardar Aster</button>
+          <span id="aster-save-ok" style="color:var(--green);font-size:11px;margin-left:12px;display:none;">✓ Guardado</span>
+        </div>
+
+        <div class="alert alert-warn">
+          ⚠️ <strong>Limitación CORS:</strong> Las APIs de Lighter y Aster pueden requerir un proxy local si tu navegador bloquea las peticiones cross-origin. Para desarrollo local, usa una extensión como <em>CORS Unblock</em> o ejecuta un proxy simple con <code>npx cors-anywhere</code> en el puerto 8080.
+        </div>
+      </div>
+
+      <!-- ══════ OVERVIEW ══════ -->
+      <div class="page" id="page-overview">
+        <div class="section-header">
+          <h2>Overview General</h2>
+          <div class="section-divider"></div>
+        </div>
+
+        <div class="stats-grid" id="overviewStats">
+          <div class="stat-card neutral">
+            <div class="stat-label">Total Equity</div>
+            <div class="stat-value" id="totalEquity">—</div>
+            <div class="stat-sub">Lighter + Aster</div>
+          </div>
+          <div class="stat-card lighter">
+            <div class="stat-label">Lighter Balance</div>
+            <div class="stat-value" id="lighterBalance">—</div>
+            <div class="stat-sub">USDC disponible</div>
+          </div>
+          <div class="stat-card aster">
+            <div class="stat-label">Aster Balance</div>
+            <div class="stat-value" id="asterBalance">—</div>
+            <div class="stat-sub">USDC disponible</div>
+          </div>
+          <div class="stat-card positive">
+            <div class="stat-label">PnL No Realizado</div>
+            <div class="stat-value" id="unrealizedPnl">—</div>
+            <div class="stat-sub">Posiciones abiertas</div>
+          </div>
+          <div class="stat-card positive">
+            <div class="stat-label">PnL Realizado Hoy</div>
+            <div class="stat-value" id="realizedToday">—</div>
+            <div class="stat-sub">Trades cerrados hoy</div>
+          </div>
+          <div class="stat-card neutral">
+            <div class="stat-label">Posiciones Abiertas</div>
+            <div class="stat-value" id="openPositionsCount">—</div>
+            <div class="stat-sub">Ambos exchanges</div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="table-card">
+            <div class="table-header">
+              <div class="table-title"><span class="ex-badge l">LIGHTER</span> Cuenta</div>
+            </div>
+            <div id="lighterAccountDetail">
+              <div class="empty-state"><div class="icon">◎</div><p>Sin configuración — ve a ⚙ Config</p></div>
+            </div>
+          </div>
+          <div class="table-card">
+            <div class="table-header">
+              <div class="table-title"><span class="ex-badge a">ASTER</span> Cuenta</div>
+            </div>
+            <div id="asterAccountDetail">
+              <div class="empty-state"><div class="icon">◎</div><p>Sin configuración — ve a ⚙ Config</p></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-card">
+          <div class="table-header">
+            <div class="table-title">Últimos Trades</div>
+          </div>
+          <div id="recentTradesContainer">
+            <div class="empty-state"><div class="icon">📊</div><p>Actualiza para ver trades recientes</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════ PNL ══════ -->
+      <div class="page" id="page-pnl">
+        <div class="section-header">
+          <h2>PnL — Ganancias &amp; Pérdidas</h2>
+          <div class="section-divider"></div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card positive">
+            <div class="stat-label">PnL Realizado Total</div>
+            <div class="stat-value" id="totalRealizedPnl">—</div>
+            <div class="stat-sub">Histórico</div>
+          </div>
+          <div class="stat-card lighter">
+            <div class="stat-label">PnL Lighter</div>
+            <div class="stat-value" id="lighterPnl">—</div>
+            <div class="stat-sub">Realizado + No real.</div>
+          </div>
+          <div class="stat-card aster">
+            <div class="stat-label">PnL Aster</div>
+            <div class="stat-value" id="asterPnl">—</div>
+            <div class="stat-sub">Realizado + No real.</div>
+          </div>
+          <div class="stat-card neutral">
+            <div class="stat-label">Fees Pagadas</div>
+            <div class="stat-value" id="totalFees">—</div>
+            <div class="stat-sub">Trading fees totales</div>
+          </div>
+        </div>
+
+        <div class="chart-container">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <div style="font-family:var(--font-display);font-size:13px;font-weight:700;">Equity Curve</div>
+            <div class="tabs" style="margin:0;">
+              <button class="tab-btn active" onclick="setPnlRange('7d',this)">7D</button>
+              <button class="tab-btn" onclick="setPnlRange('30d',this)">30D</button>
+              <button class="tab-btn" onclick="setPnlRange('all',this)">TODO</button>
+            </div>
+          </div>
+          <canvas id="pnlChart" height="220"></canvas>
+        </div>
+
+        <div class="two-col">
+          <div class="table-card">
+            <div class="table-header"><div class="table-title"><span class="ex-badge l">LIGHTER</span> Trades Realizados</div></div>
+            <div id="lighterTradesTable">
+              <div class="empty-state"><div class="icon">📋</div><p>Sin datos</p></div>
+            </div>
+          </div>
+          <div class="table-card">
+            <div class="table-header"><div class="table-title"><span class="ex-badge a">ASTER</span> Trades Realizados</div></div>
+            <div id="asterTradesTable">
+              <div class="empty-state"><div class="icon">📋</div><p>Sin datos</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════ POSITIONS ══════ -->
+      <div class="page" id="page-positions">
+        <div class="section-header">
+          <h2>Posiciones Abiertas</h2>
+          <div class="section-divider"></div>
+        </div>
+
+        <div class="table-card">
+          <div class="table-header">
+            <div class="table-title"><span class="ex-badge l">LIGHTER</span> Posiciones</div>
+          </div>
+          <div id="lighterPositionsTable">
+            <div class="empty-state"><div class="icon">⊞</div><p>Sin posiciones abiertas en Lighter</p></div>
+          </div>
+        </div>
+
+        <div class="table-card">
+          <div class="table-header">
+            <div class="table-title"><span class="ex-badge a">ASTER</span> Posiciones</div>
+          </div>
+          <div id="asterPositionsTable">
+            <div class="empty-state"><div class="icon">⊞</div><p>Sin posiciones abiertas en Aster</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════ CALENDAR ══════ -->
+      <div class="page" id="page-calendar">
+        <div class="section-header">
+          <h2>Calendario de Trades</h2>
+          <div class="section-divider"></div>
+        </div>
+
+        <div class="config-panel" style="padding:14px 20px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <button onclick="calPrev()" style="background:none;border:1px solid var(--border);color:var(--text);padding:4px 12px;border-radius:4px;cursor:pointer;font-family:var(--font-mono);">◀</button>
+            <div style="font-family:var(--font-display);font-weight:700;font-size:15px;" id="calMonthLabel">—</div>
+            <button onclick="calNext()" style="background:none;border:1px solid var(--border);color:var(--text);padding:4px 12px;border-radius:4px;cursor:pointer;font-family:var(--font-mono);">▶</button>
+          </div>
+          <div class="calendar-grid" id="calGrid" style="margin-top:14px;"></div>
+          <div style="display:flex;gap:16px;margin-top:12px;font-size:10px;color:var(--muted);">
+            <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;background:rgba(0,255,135,0.2);border:1px solid rgba(0,255,135,0.4);border-radius:2px;display:inline-block;"></span>Día con ganancia</span>
+            <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;background:rgba(255,59,92,0.2);border:1px solid rgba(255,59,92,0.4);border-radius:2px;display:inline-block;"></span>Día con pérdida</span>
+            <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border:1px solid var(--accent-l);border-radius:2px;display:inline-block;"></span>Hoy</span>
+          </div>
+        </div>
+
+        <div class="table-card">
+          <div class="table-header"><div class="table-title" id="calDetailTitle">Trades del mes</div></div>
+          <div id="calDetailTable">
+            <div class="empty-state"><div class="icon">📅</div><p>Selecciona un día del calendario</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════ TRANSFERS ══════ -->
+      <div class="page" id="page-transfers">
+        <div class="section-header">
+          <h2>Depósitos &amp; Retiros</h2>
+          <div class="section-divider"></div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card positive">
+            <div class="stat-label">Total Depositado</div>
+            <div class="stat-value" id="totalDeposited">—</div>
+            <div class="stat-sub">Histórico ambos</div>
+          </div>
+          <div class="stat-card negative">
+            <div class="stat-label">Total Retirado</div>
+            <div class="stat-value" id="totalWithdrawn">—</div>
+            <div class="stat-sub">Histórico ambos</div>
+          </div>
+          <div class="stat-card neutral">
+            <div class="stat-label">Balance Neto</div>
+            <div class="stat-value" id="netBalance">—</div>
+            <div class="stat-sub">Dep. − Retiros</div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="table-card">
+            <div class="table-header"><div class="table-title"><span class="ex-badge l">LIGHTER</span> Transferencias</div></div>
+            <div id="lighterTransfers">
+              <div class="empty-state"><div class="icon">⇅</div><p>Sin historial disponible</p></div>
+            </div>
+          </div>
+          <div class="table-card">
+            <div class="table-header"><div class="table-title"><span class="ex-badge a">ASTER</span> Transferencias</div></div>
+            <div id="asterTransfers">
+              <div class="empty-state"><div class="icon">⇅</div><p>Sin historial disponible</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+// ════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════
+const STATE = {
+  lighter: { balance: null, positions: [], trades: [], transfers: [], account: null },
+  aster:   { balance: null, positions: [], trades: [], transfers: [], account: null },
+  autoRefresh: false,
+  autoInterval: null,
+  calYear: new Date().getFullYear(),
+  calMonth: new Date().getMonth(),
+  tradesByDay: {},   // "YYYY-MM-DD" → [{...}]
+};
+
+const LIGHTER_BASE = 'https://mainnet.zklighter.elliot.ai';
+const ASTER_BASE   = 'https://fapi.asterdex.com';
+
+// ════════════════════════════════════════════
+//  CONFIG
+// ════════════════════════════════════════════
+function loadConfig() {
+  ['l_l1address','l_accountIndex','l_apiKeyIndex','l_privateKey','a_apiKey','a_apiSecret'].forEach(k => {
+    const el = document.getElementById(k);
+    const v = localStorage.getItem(k);
+    if (el && v) el.value = v;
+  });
+}
+
+function saveConfig(exchange) {
+  if (exchange === 'lighter') {
+    ['l_l1address','l_accountIndex','l_apiKeyIndex','l_privateKey'].forEach(k => {
+      localStorage.setItem(k, document.getElementById(k).value);
+    });
+    const ok = document.getElementById('lighter-save-ok');
+    ok.style.display = 'inline'; setTimeout(() => ok.style.display = 'none', 2000);
+  } else {
+    ['a_apiKey','a_apiSecret'].forEach(k => {
+      localStorage.setItem(k, document.getElementById(k).value);
+    });
+    const ok = document.getElementById('aster-save-ok');
+    ok.style.display = 'inline'; setTimeout(() => ok.style.display = 'none', 2000);
+  }
+}
+
+function getConfig() {
+  return {
+    l_l1address:    localStorage.getItem('l_l1address') || '',
+    l_accountIndex: localStorage.getItem('l_accountIndex') || '0',
+    l_apiKeyIndex:  localStorage.getItem('l_apiKeyIndex') || '3',
+    l_privateKey:   localStorage.getItem('l_privateKey') || '',
+    a_apiKey:       localStorage.getItem('a_apiKey') || '',
+    a_apiSecret:    localStorage.getItem('a_apiSecret') || '',
+  };
+}
+
+// ════════════════════════════════════════════
+//  NAV
+// ════════════════════════════════════════════
+const PAGE_TITLES = {
+  overview:'Overview General', pnl:'PnL — Ganancias & Pérdidas',
+  positions:'Posiciones Abiertas', calendar:'Calendario de Trades',
+  transfers:'Depósitos & Retiros', config:'Configuración'
+};
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick')?.includes("'"+id+"'")) n.classList.add('active');
+  });
+  document.getElementById('pageTitle').textContent = PAGE_TITLES[id] || id;
+  if (id === 'calendar') renderCalendar();
+}
+
+// ════════════════════════════════════════════
+//  AUTO REFRESH
+// ════════════════════════════════════════════
+function toggleAutoRefresh() {
+  STATE.autoRefresh = !STATE.autoRefresh;
+  const tog = document.getElementById('autoToggle');
+  const lbl = document.getElementById('autoLabel');
+  tog.classList.toggle('on', STATE.autoRefresh);
+  lbl.textContent = 'Auto-refresh: ' + (STATE.autoRefresh ? 'ON (30s)' : 'OFF');
+  if (STATE.autoRefresh) {
+    STATE.autoInterval = setInterval(fetchAllData, 30000);
+  } else {
+    clearInterval(STATE.autoInterval);
+  }
+}
+
+// ════════════════════════════════════════════
+//  FETCH ALL DATA
+// ════════════════════════════════════════════
+async function fetchAllData() {
+  const btn = document.getElementById('refreshBtn');
+  btn.classList.add('spinning');
+  await Promise.allSettled([fetchLighterData(), fetchAsterData()]);
+  btn.classList.remove('spinning');
+  updateAllViews();
+  document.getElementById('lastUpdate').textContent =
+    'Actualizado: ' + new Date().toLocaleTimeString('es-ES');
+}
+
+// ════════════════════════════════════════════
+//  LIGHTER API
+// ════════════════════════════════════════════
+async function fetchLighterData() {
+  const cfg = getConfig();
+  if (!cfg.l_l1address && !cfg.l_accountIndex) return;
+
+  try {
+    // Account by index (public endpoint, no auth needed for read)
+    const accIdx = cfg.l_accountIndex || '0';
+    const url = `${LIGHTER_BASE}/api/v1/account?by=index&value=${accIdx}`;
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (res.ok) {
+      const data = await res.json();
+      STATE.lighter.account = data;
+      // Extract balance
+      const col = data.collateral || data.cross_collateral || 0;
+      STATE.lighter.balance = parseFloat(col);
+    }
+  } catch(e) {
+    console.warn('Lighter account fetch:', e.message);
+  }
+
+  try {
+    // Positions
+    const accIdx = cfg.l_accountIndex || '0';
+    const res = await fetch(`${LIGHTER_BASE}/api/v1/positions?account_index=${accIdx}`);
+    if (res.ok) {
+      const data = await res.json();
+      STATE.lighter.positions = data.positions || data || [];
+    }
+  } catch(e) { console.warn('Lighter positions:', e.message); }
+
+  try {
+    // Trades
+    const accIdx = cfg.l_accountIndex || '0';
+    const res = await fetch(`${LIGHTER_BASE}/api/v1/trades?account_index=${accIdx}&limit=100`);
+    if (res.ok) {
+      const data = await res.json();
+      STATE.lighter.trades = data.trades || data || [];
+      indexTradesByDay(STATE.lighter.trades, 'lighter');
+    }
+  } catch(e) { console.warn('Lighter trades:', e.message); }
+
+  try {
+    // Transfers (deposits/withdrawals)
+    const accIdx = cfg.l_accountIndex || '0';
+    const res = await fetch(`${LIGHTER_BASE}/api/v1/transfers?account_index=${accIdx}&limit=50`);
+    if (res.ok) {
+      const data = await res.json();
+      STATE.lighter.transfers = data.transfers || data || [];
+    }
+  } catch(e) { console.warn('Lighter transfers:', e.message); }
+}
+
+// ════════════════════════════════════════════
+//  ASTER API  (HMAC-SHA256 signing)
+// ════════════════════════════════════════════
+async function hmacSHA256(secret, message) {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(message));
+  return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function asterSignedFetch(endpoint, params = {}) {
+  const cfg = getConfig();
+  if (!cfg.a_apiKey || !cfg.a_apiSecret) return null;
+  const ts = Date.now();
+  const qParams = { ...params, timestamp: ts, recvWindow: 5000 };
+  const qs = Object.entries(qParams).map(([k,v]) => `${k}=${v}`).join('&');
+  const sig = await hmacSHA256(cfg.a_apiSecret, qs);
+  const url = `${ASTER_BASE}${endpoint}?${qs}&signature=${sig}`;
+  const res = await fetch(url, { headers: { 'X-MBX-APIKEY': cfg.a_apiKey } });
+  if (res.ok) return res.json();
+  return null;
+}
+
+async function fetchAsterData() {
+  const cfg = getConfig();
+  if (!cfg.a_apiKey) return;
+
+  try {
+    const data = await asterSignedFetch('/fapi/v2/balance');
+    if (data) {
+      const usdc = data.find(a => a.asset === 'USDT' || a.asset === 'USDC');
+      STATE.aster.balance = usdc ? parseFloat(usdc.balance) : 0;
+      STATE.aster.account = data;
+    }
+  } catch(e) { console.warn('Aster balance:', e.message); }
+
+  try {
+    const data = await asterSignedFetch('/fapi/v2/positionRisk');
+    if (data) STATE.aster.positions = data.filter(p => parseFloat(p.positionAmt) !== 0);
+  } catch(e) { console.warn('Aster positions:', e.message); }
+
+  try {
+    const data = await asterSignedFetch('/fapi/v1/userTrades', { limit: 100 });
+    if (data) {
+      STATE.aster.trades = data;
+      indexTradesByDay(data, 'aster');
+    }
+  } catch(e) { console.warn('Aster trades:', e.message); }
+
+  try {
+    // Income history covers deposits/withdrawals
+    const data = await asterSignedFetch('/fapi/v1/income', { limit: 50, incomeType: 'TRANSFER' });
+    if (data) STATE.aster.transfers = data;
+  } catch(e) { console.warn('Aster transfers:', e.message); }
+}
+
+// ════════════════════════════════════════════
+//  INDEX TRADES BY DAY
+// ════════════════════════════════════════════
+function indexTradesByDay(trades, exchange) {
+  trades.forEach(t => {
+    const tsField = t.created_at || t.time || t.timestamp;
+    if (!tsField) return;
+    const date = new Date(typeof tsField === 'number' ? tsField : Date.parse(tsField));
+    const key = date.toISOString().split('T')[0];
+    if (!STATE.tradesByDay[key]) STATE.tradesByDay[key] = [];
+    STATE.tradesByDay[key].push({ ...t, _exchange: exchange });
+  });
+}
+
+// ════════════════════════════════════════════
+//  FORMAT HELPERS
+// ════════════════════════════════════════════
+function fmt$(v, dec=2) {
+  if (v === null || v === undefined || isNaN(v)) return '—';
+  const n = parseFloat(v);
+  return '$' + n.toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+}
+function fmtPnl(v) {
+  if (v === null || v === undefined || isNaN(v)) return '<span>—</span>';
+  const n = parseFloat(v);
+  const cls = n >= 0 ? 'pos' : 'neg';
+  const sign = n >= 0 ? '+' : '';
+  return `<span class="${cls}">${sign}${fmt$(n)}</span>`;
+}
+function fmtDate(ts) {
+  if (!ts) return '—';
+  return new Date(typeof ts === 'number' ? ts : Date.parse(ts)).toLocaleString('es-ES');
+}
+
+// ════════════════════════════════════════════
+//  UPDATE ALL VIEWS
+// ════════════════════════════════════════════
+function updateAllViews() {
+  updateOverview();
+  updatePnl();
+  updatePositions();
+  updateTransfers();
+  renderCalendar();
+  drawChart();
+}
+
+// ─── OVERVIEW ───
+function updateOverview() {
+  const lb = STATE.lighter.balance;
+  const ab = STATE.aster.balance;
+  const total = (lb || 0) + (ab || 0);
+
+  document.getElementById('lighterBalance').textContent = lb !== null ? fmt$(lb) : '—';
+  document.getElementById('asterBalance').textContent   = ab !== null ? fmt$(ab) : '—';
+  document.getElementById('totalEquity').textContent    = total > 0 ? fmt$(total) : '—';
+
+  // Unrealized PnL from positions
+  let unreal = 0;
+  STATE.lighter.positions.forEach(p => {
+    const pnl = parseFloat(p.unrealized_pnl || p.unrealizedPnl || 0);
+    unreal += pnl;
+  });
+  STATE.aster.positions.forEach(p => {
+    unreal += parseFloat(p.unrealizedProfit || 0);
+  });
+  document.getElementById('unrealizedPnl').innerHTML = fmtPnl(unreal);
+
+  // PnL today
+  const today = new Date().toISOString().split('T')[0];
+  const todayTrades = STATE.tradesByDay[today] || [];
+  let todayPnl = 0;
+  todayTrades.forEach(t => {
+    todayPnl += parseFloat(t.realized_pnl || t.realizedPnl || t.realizedProfit || 0);
+  });
+  document.getElementById('realizedToday').innerHTML = fmtPnl(todayPnl);
+
+  const openCount = STATE.lighter.positions.length + STATE.aster.positions.length;
+  document.getElementById('openPositionsCount').textContent = openCount;
+
+  // Lighter account detail
+  const la = STATE.lighter.account;
+  if (la) {
+    document.getElementById('lighterAccountDetail').innerHTML = `
+      <div style="padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:12px;">
+        <div><div style="color:var(--muted);font-size:10px;margin-bottom:4px;">COLLATERAL</div><div>${fmt$(la.collateral || la.cross_collateral)}</div></div>
+        <div><div style="color:var(--muted);font-size:10px;margin-bottom:4px;">PORTFOLIO VALUE</div><div>${fmt$(la.portfolio_value)}</div></div>
+        <div><div style="color:var(--muted);font-size:10px;margin-bottom:4px;">AVAILABLE</div><div>${fmt$(la.available_balance)}</div></div>
+        <div><div style="color:var(--muted);font-size:10px;margin-bottom:4px;">LEVERAGE</div><div>${parseFloat(la.leverage||0).toFixed(2)}×</div></div>
+        <div><div style="color:var(--muted);font-size:10px;margin-bottom:4px;">MARGIN USAGE</div><div>${parseFloat(la.margin_usage||0).toFixed(2)}%</div></div>
+        <div><div style="color:var(--muted);font-size:10px;margin-bottom:4px;">BUYING POWER</div><div>${fmt$(la.buying_power)}</div></div>
+      </div>`;
+  }
+
+  // Aster account detail
+  if (STATE.aster.account && Array.isArray(STATE.aster.account)) {
+    const assets = STATE.aster.account.filter(a => parseFloat(a.balance) > 0);
+    if (assets.length > 0) {
+      document.getElementById('asterAccountDetail').innerHTML = `
+        <table><thead><tr><th>Asset</th><th>Balance</th><th>Disponible</th></tr></thead><tbody>
+        ${assets.map(a => `<tr><td>${a.asset}</td><td>${parseFloat(a.balance).toFixed(4)}</td><td>${parseFloat(a.availableBalance||a.balance).toFixed(4)}</td></tr>`).join('')}
+        </tbody></table>`;
+    }
+  }
+
+  // Recent trades
+  const allTrades = [...(STATE.lighter.trades||[]).map(t=>({...t,_ex:'L'})), ...(STATE.aster.trades||[]).map(t=>({...t,_ex:'A'}))];
+  allTrades.sort((a,b) => {
+    const ta = a.created_at||a.time||0; const tb = b.created_at||b.time||0;
+    return (typeof tb==='number'?tb:Date.parse(tb)) - (typeof ta==='number'?ta:Date.parse(ta));
+  });
+  const recent = allTrades.slice(0,10);
+  if (recent.length > 0) {
+    document.getElementById('recentTradesContainer').innerHTML = `
+      <table><thead><tr><th>Exchange</th><th>Par</th><th>Lado</th><th>Precio</th><th>Cantidad</th><th>PnL</th><th>Fecha</th></tr></thead>
+      <tbody>${recent.map(t => {
+        const side = t.side || t.is_buyer_maker ? 'LONG' : 'SHORT';
+        const sideClass = (t.side === 'BUY' || side === 'LONG') ? 'side-long' : 'side-short';
+        const pnl = t.realized_pnl || t.realizedPnl || t.realizedProfit || 0;
+        const market = t.market || t.symbol || '—';
+        const price = t.price || t.fill_price || '—';
+        const qty = t.base_amount || t.qty || t.quantity || '—';
+        const ts = t.created_at || t.time;
+        return `<tr>
+          <td><span class="ex-badge ${t._ex==='L'?'l':'a'}">${t._ex==='L'?'LIGHTER':'ASTER'}</span></td>
+          <td>${market}</td>
+          <td><span class="${sideClass}">${side}</span></td>
+          <td>${parseFloat(price||0).toFixed(2)}</td>
+          <td>${parseFloat(qty||0).toFixed(4)}</td>
+          <td>${fmtPnl(pnl)}</td>
+          <td style="color:var(--muted)">${fmtDate(ts)}</td>
+        </tr>`;
+      }).join('')}</tbody></table>`;
+  }
+}
+
+// ─── PNL ───
+function updatePnl() {
+  let lPnl = 0, aPnl = 0, fees = 0;
+  STATE.lighter.trades.forEach(t => { lPnl += parseFloat(t.realized_pnl||t.realizedPnl||0); fees += parseFloat(t.fee||0); });
+  STATE.aster.trades.forEach(t => { aPnl += parseFloat(t.realizedPnl||t.realizedProfit||0); fees += parseFloat(t.commission||0); });
+
+  const lUnreal = STATE.lighter.positions.reduce((s,p) => s + parseFloat(p.unrealized_pnl||0), 0);
+  const aUnreal = STATE.aster.positions.reduce((s,p) => s + parseFloat(p.unrealizedProfit||0), 0);
+
+  document.getElementById('totalRealizedPnl').innerHTML = fmtPnl(lPnl + aPnl);
+  document.getElementById('lighterPnl').innerHTML = fmtPnl(lPnl + lUnreal);
+  document.getElementById('asterPnl').innerHTML = fmtPnl(aPnl + aUnreal);
+  document.getElementById('totalFees').textContent = fees > 0 ? fmt$(fees) : '—';
+
+  // Lighter trades table
+  const lt = STATE.lighter.trades.slice(0,20);
+  document.getElementById('lighterTradesTable').innerHTML = lt.length > 0 ?
+    `<table><thead><tr><th>Par</th><th>Lado</th><th>Precio</th><th>PnL Real.</th><th>Fee</th><th>Fecha</th></tr></thead><tbody>
+    ${lt.map(t => `<tr>
+      <td>${t.market||'—'}</td>
+      <td><span class="${t.side==='BUY'?'side-long':'side-short'}">${t.side||'—'}</span></td>
+      <td>${parseFloat(t.price||t.fill_price||0).toFixed(2)}</td>
+      <td>${fmtPnl(t.realized_pnl||0)}</td>
+      <td style="color:var(--muted)">${fmt$(t.fee||0)}</td>
+      <td style="color:var(--muted);font-size:10px">${fmtDate(t.created_at)}</td>
+    </tr>`).join('')}</tbody></table>` :
+    '<div class="empty-state"><div class="icon">📋</div><p>Sin trades en Lighter</p></div>';
+
+  // Aster trades table
+  const at = STATE.aster.trades.slice(0,20);
+  document.getElementById('asterTradesTable').innerHTML = at.length > 0 ?
+    `<table><thead><tr><th>Par</th><th>Lado</th><th>Precio</th><th>PnL Real.</th><th>Fee</th><th>Fecha</th></tr></thead><tbody>
+    ${at.map(t => `<tr>
+      <td>${t.symbol||'—'}</td>
+      <td><span class="${t.side==='BUY'?'side-long':'side-short'}">${t.side||'—'}</span></td>
+      <td>${parseFloat(t.price||0).toFixed(2)}</td>
+      <td>${fmtPnl(t.realizedPnl||0)}</td>
+      <td style="color:var(--muted)">${fmt$(t.commission||0)}</td>
+      <td style="color:var(--muted);font-size:10px">${fmtDate(t.time)}</td>
+    </tr>`).join('')}</tbody></table>` :
+    '<div class="empty-state"><div class="icon">📋</div><p>Sin trades en Aster</p></div>';
+}
+
+// ─── POSITIONS ───
+function updatePositions() {
+  const lp = STATE.lighter.positions;
+  document.getElementById('lighterPositionsTable').innerHTML = lp.length > 0 ?
+    `<table><thead><tr><th>Par</th><th>Lado</th><th>Tamaño</th><th>Precio Entrada</th><th>PnL No Real.</th><th>Leverage</th><th>Liq. Price</th></tr></thead><tbody>
+    ${lp.map(p => `<tr>
+      <td>${p.market||p.market_id||'—'}</td>
+      <td><span class="${p.side==='LONG'||p.position_side==='LONG'?'side-long':'side-short'}">${p.side||p.position_side||'—'}</span></td>
+      <td>${parseFloat(p.base_amount||p.size||0).toFixed(4)}</td>
+      <td>${fmt$(p.avg_price||p.entry_price||0)}</td>
+      <td>${fmtPnl(p.unrealized_pnl||p.unrealizedPnl||0)}</td>
+      <td>${p.leverage||'—'}×</td>
+      <td style="color:var(--red)">${fmt$(p.liquidation_price||p.liquidationPrice||0)}</td>
+    </tr>`).join('')}</tbody></table>` :
+    '<div class="empty-state"><div class="icon">✓</div><p>Sin posiciones abiertas en Lighter</p></div>';
+
+  const ap = STATE.aster.positions;
+  document.getElementById('asterPositionsTable').innerHTML = ap.length > 0 ?
+    `<table><thead><tr><th>Par</th><th>Lado</th><th>Tamaño</th><th>Precio Entrada</th><th>PnL No Real.</th><th>Leverage</th><th>Liq. Price</th></tr></thead><tbody>
+    ${ap.map(p => `<tr>
+      <td>${p.symbol||'—'}</td>
+      <td><span class="${parseFloat(p.positionAmt)>0?'side-long':'side-short'}">${parseFloat(p.positionAmt)>0?'LONG':'SHORT'}</span></td>
+      <td>${Math.abs(parseFloat(p.positionAmt||0)).toFixed(4)}</td>
+      <td>${fmt$(p.entryPrice||0)}</td>
+      <td>${fmtPnl(p.unrealizedProfit||0)}</td>
+      <td>${p.leverage||'—'}×</td>
+      <td style="color:var(--red)">${fmt$(p.liquidationPrice||0)}</td>
+    </tr>`).join('')}</tbody></table>` :
+    '<div class="empty-state"><div class="icon">✓</div><p>Sin posiciones abiertas en Aster</p></div>';
+}
+
+// ─── TRANSFERS ───
+function updateTransfers() {
+  let totalDep = 0, totalWith = 0;
+
+  const renderTx = (txList, container, isLighter) => {
+    if (!txList || txList.length === 0) {
+      document.getElementById(container).innerHTML = '<div class="empty-state"><div class="icon">⇅</div><p>Sin transferencias registradas</p></div>';
+      return;
+    }
+    document.getElementById(container).innerHTML = txList.slice(0,20).map(tx => {
+      const isDeposit = isLighter
+        ? (tx.type === 'deposit' || parseFloat(tx.amount||0) > 0)
+        : (parseFloat(tx.income||0) > 0);
+      const amount = isLighter ? parseFloat(tx.amount||0) : parseFloat(tx.income||0);
+      const absAmt = Math.abs(amount);
+      if (isDeposit) totalDep += absAmt; else totalWith += absAmt;
+      const ts = tx.created_at || tx.time || tx.timestamp;
+      return `<div class="tx-item ${isDeposit?'tx-deposit':'tx-withdraw'}">
+        <div style="display:flex;align-items:center;">
+          <div class="tx-type-icon">${isDeposit?'↓':'↑'}</div>
+          <div>
+            <div style="font-size:12px;color:${isDeposit?'var(--green)':'var(--red)'};">${isDeposit?'DEPÓSITO':'RETIRO'}</div>
+            <div style="font-size:10px;color:var(--muted);">${fmtDate(ts)}</div>
+          </div>
+        </div>
+        <div style="font-weight:700;color:${isDeposit?'var(--green)':'var(--red)'};">${isDeposit?'+':'-'}${fmt$(absAmt)}</div>
+      </div>`;
+    }).join('');
+  };
+
+  renderTx(STATE.lighter.transfers, 'lighterTransfers', true);
+  renderTx(STATE.aster.transfers, 'asterTransfers', false);
+
+  document.getElementById('totalDeposited').textContent = totalDep > 0 ? fmt$(totalDep) : '—';
+  document.getElementById('totalWithdrawn').textContent = totalWith > 0 ? fmt$(totalWith) : '—';
+  const net = totalDep - totalWith;
+  document.getElementById('netBalance').innerHTML = net !== 0 ? fmtPnl(net) : '—';
+}
+
+// ─── CALENDAR ───
+function renderCalendar() {
+  const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  document.getElementById('calMonthLabel').textContent = `${months[STATE.calMonth]} ${STATE.calYear}`;
+
+  const today = new Date();
+  const firstDay = new Date(STATE.calYear, STATE.calMonth, 1).getDay();
+  const daysInMonth = new Date(STATE.calYear, STATE.calMonth+1, 0).getDate();
+
+  let html = ['DOM','LUN','MAR','MIÉ','JUE','VIE','SÁB']
+    .map(d => `<div class="cal-header">${d}</div>`).join('');
+
+  for (let i = 0; i < firstDay; i++) html += `<div class="cal-day empty"></div>`;
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${STATE.calYear}-${String(STATE.calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dayTrades = STATE.tradesByDay[dateStr] || [];
+    const isToday = today.getDate()===d && today.getMonth()===STATE.calMonth && today.getFullYear()===STATE.calYear;
+
+    let dayPnl = 0;
+    dayTrades.forEach(t => { dayPnl += parseFloat(t.realized_pnl||t.realizedPnl||t.realizedProfit||0); });
+
+    let cls = 'cal-day';
+    if (isToday) cls += ' today';
+    if (dayTrades.length > 0) cls += ' has-trades';
+    if (dayPnl > 0) cls += ' profit';
+    if (dayPnl < 0) cls += ' loss';
+
+    html += `<div class="${cls}" onclick="showCalDay('${dateStr}')">
+      <div class="cal-day-num">${d}</div>
+      ${dayPnl !== 0 ? `<div class="cal-day-pnl ${dayPnl>0?'pos':'neg'}">${dayPnl>0?'+':''}${dayPnl.toFixed(0)}</div>` : ''}
+    </div>`;
+  }
+
+  document.getElementById('calGrid').innerHTML = html;
+}
+
+function showCalDay(dateStr) {
+  const trades = STATE.tradesByDay[dateStr] || [];
+  document.getElementById('calDetailTitle').textContent = `Trades del ${dateStr}`;
+  if (trades.length === 0) {
+    document.getElementById('calDetailTable').innerHTML = '<div class="empty-state"><div class="icon">✓</div><p>Sin trades este día</p></div>';
+    return;
+  }
+  document.getElementById('calDetailTable').innerHTML = `
+    <table><thead><tr><th>Exchange</th><th>Par</th><th>Lado</th><th>Precio</th><th>Cantidad</th><th>PnL</th><th>Hora</th></tr></thead>
+    <tbody>${trades.map(t => {
+      const ex = t._exchange === 'lighter' ? '<span class="ex-badge l">L</span>' : '<span class="ex-badge a">A</span>';
+      const market = t.market || t.symbol || '—';
+      const side = t.side || '—';
+      const pnl = t.realized_pnl || t.realizedPnl || t.realizedProfit || 0;
+      const ts = t.created_at || t.time;
+      const price = t.price || t.fill_price || 0;
+      const qty = t.base_amount || t.qty || t.quantity || 0;
+      return `<tr>
+        <td>${ex}</td><td>${market}</td>
+        <td><span class="${side==='BUY'?'side-long':'side-short'}">${side}</span></td>
+        <td>${parseFloat(price).toFixed(2)}</td>
+        <td>${parseFloat(qty).toFixed(4)}</td>
+        <td>${fmtPnl(pnl)}</td>
+        <td style="color:var(--muted)">${fmtDate(ts)}</td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
+}
+
+function calPrev() {
+  if (STATE.calMonth === 0) { STATE.calMonth = 11; STATE.calYear--; }
+  else STATE.calMonth--;
+  renderCalendar();
+}
+function calNext() {
+  if (STATE.calMonth === 11) { STATE.calMonth = 0; STATE.calYear++; }
+  else STATE.calMonth++;
+  renderCalendar();
+}
+
+// ─── CHART ───
+let chartInstance = null;
+let pnlRange = '7d';
+
+function setPnlRange(r, btn) {
+  pnlRange = r;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  drawChart();
+}
+
+function drawChart() {
+  const canvas = document.getElementById('pnlChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  // Build daily PnL series
+  const now = new Date();
+  const days = pnlRange === '7d' ? 7 : pnlRange === '30d' ? 30 : 90;
+  const labels = [], values = [];
+  let cumulative = 0;
+
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().split('T')[0];
+    const dayTrades = STATE.tradesByDay[key] || [];
+    let dayPnl = 0;
+    dayTrades.forEach(t => { dayPnl += parseFloat(t.realized_pnl||t.realizedPnl||t.realizedProfit||0); });
+    cumulative += dayPnl;
+    labels.push(key.slice(5));
+    values.push(parseFloat(cumulative.toFixed(2)));
+  }
+
+  // Clear
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const W = canvas.offsetWidth || 600;
+  const H = 200;
+  canvas.width = W;
+  canvas.height = H;
+
+  if (values.every(v => v === 0)) {
+    ctx.fillStyle = '#64748b';
+    ctx.font = '12px Space Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText('Sin datos de PnL disponibles — actualiza para ver la curva', W/2, H/2);
+    return;
+  }
+
+  const minV = Math.min(...values), maxV = Math.max(...values);
+  const range = maxV - minV || 1;
+  const pad = { top: 20, bottom: 30, left: 50, right: 10 };
+
+  const xScale = i => pad.left + (i / (labels.length - 1)) * (W - pad.left - pad.right);
+  const yScale = v => pad.top + (1 - (v - minV) / range) * (H - pad.top - pad.bottom);
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(30,45,68,0.8)';
+  ctx.lineWidth = 1;
+  for (let g = 0; g <= 4; g++) {
+    const y = pad.top + (g / 4) * (H - pad.top - pad.bottom);
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+    const val = maxV - (g / 4) * range;
+    ctx.fillStyle = '#64748b'; ctx.font = '9px Space Mono'; ctx.textAlign = 'right';
+    ctx.fillText(fmt$(val, 0), pad.left - 4, y + 3);
+  }
+
+  // Fill
+  const grad = ctx.createLinearGradient(0, pad.top, 0, H - pad.bottom);
+  const lastV = values[values.length-1];
+  grad.addColorStop(0, lastV >= 0 ? 'rgba(0,255,135,0.25)' : 'rgba(255,59,92,0.25)');
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.beginPath();
+  ctx.moveTo(xScale(0), yScale(values[0]));
+  values.forEach((v, i) => { if (i > 0) ctx.lineTo(xScale(i), yScale(v)); });
+  ctx.lineTo(xScale(values.length-1), H - pad.bottom);
+  ctx.lineTo(xScale(0), H - pad.bottom);
+  ctx.closePath();
+  ctx.fillStyle = grad; ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  ctx.strokeStyle = lastV >= 0 ? '#00ff87' : '#ff3b5c';
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  values.forEach((v, i) => { i === 0 ? ctx.moveTo(xScale(i), yScale(v)) : ctx.lineTo(xScale(i), yScale(v)); });
+  ctx.stroke();
+
+  // X labels
+  ctx.fillStyle = '#64748b'; ctx.font = '9px Space Mono'; ctx.textAlign = 'center';
+  const step = Math.ceil(labels.length / 6);
+  labels.forEach((l, i) => { if (i % step === 0) ctx.fillText(l, xScale(i), H - 8); });
+}
+
+// ════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════
+loadConfig();
+renderCalendar();
+showPage('config');
+
+// If creds already saved, show overview
+const cfg = getConfig();
+if (cfg.l_l1address || cfg.a_apiKey) {
+  showPage('overview');
+}
+</script>
+</body>
+</html>
